@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: orderingsystem
+  datasource:
+    url: jdbc:postgresql://ep-floral-frost-a1bg8zzo-pooler.ap-southeast-1.aws.neon.tech/neondb?user=neondb_owner&password=npg_lbgkwo7MX2YJ&sslmode=require&channelBinding=require
+    username: neondb_owner
+    password: npg_lbgkwo7MX2YJ
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        open-in-view: false
+
+payment:
+  gateway:
+    endpoint-url: "https://api.mockpayment.com/v1/charge"
+    api-key: "sk_live_sample_secret_key_12345"

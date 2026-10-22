@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tester API - OrderingSystem</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f0f2f5;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-width: 700px;
+        width: 100%;
+      }
+      h2 {
+        margin-top: 0;
+        color: #1a1a1a;
+      }
+      .button-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 25px;
+      }
+      button {
+        border: none;
+        padding: 12px 15px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: white;
+      }
+      .btn-1 {
+        background: #28a745;
+      }
+      .btn-1:hover {
+        background: #218838;
+      }
+      .btn-2 {
+        background: #ffc107;
+        color: #333;
+      }
+      .btn-2:hover {
+        background: #e0a800;
+      }
+      .btn-3 {
+        background: #dc3545;
+      }
+      .btn-3:hover {
+        background: #c82333;
+      }
+      .btn-4 {
+        background: #6c757d;
+      }
+      .btn-4:hover {
+        background: #5a6268;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+
+      pre {
+        background: #282c34;
+        color: #61dafb;
+        padding: 15px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Tester API OrderingSystem</h2>
+      <p>
+        Pilih skenario pengujian di bawah ini untuk menembak REST API Spring
+        Boot kamu:
+      </p>
+
+      <div class="button-group">
+        <button class="btn-1" onclick="skenario1()">1. Checkout Sukses</button>
+        <button class="btn-2" onclick="skenario2()">2. Tes Stok Habis</button>
+        <button class="btn-3" onclick="skenario3()">
+          3. Tes Payment Ditolak
+        </button>
+        <button class="btn-4" onclick="skenario4()">
+          4. Batalkan Transaksi (Sk-1)
+        </button>
+      </div>
+
+      <div>
+        <h3 style="margin-bottom: 5px">Respons JSON:</h3>
+        <div id="status-indicator"></div>
+        <pre id="output">Belum ada request yang dikirim...</pre>
+      </div>
+    </div>
+
+    <script>
+      // Variabel global untuk menyimpan ID Pesanan agar bisa dibatalkan di Skenario 4
+      let idPesananTerakhir = "";
+
+      // Fungsi Helper untuk Fetch API
+      async function kirimRequest(url, payload, method = "POST") {
+        const output = document.getElementById("output");
+        const indicator = document.getElementById("status-indicator");
+
+        output.innerHTML = "Memproses request ke server...";
+        indicator.innerHTML = "";
+
+        try {
+          const response = await fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json();
+
+          // Menampilkan status HTTP
+          if (response.ok) {
+            indicator.innerHTML = `<span class="status-badge" style="background:#d4edda; color:#155724;">HTTP ${response.status} - OK</span>`;
+          } else {
+            indicator.innerHTML = `<span class="status-badge" style="background:#f8d7da; color:#721c24;">HTTP ${response.status} - ERROR</span>`;
+          }
+
+          output.innerHTML = JSON.stringify(data, null, 2);
+          return { response, data };
+        } catch (error) {
+          indicator.innerHTML = `<span class="status-badge" style="background:#f8d7da; color:#721c24;">CONNECTION ERROR</span>`;
+          output.innerHTML =
+            "Gagal terhubung ke Spring Boot!\nPastikan server (mvnw spring-boot:run) sudah menyala.\nError: " +
+            error.message;
+        }
+      }
+
+      // --- FUNGSI SKENARIO PENGUJIAN ---
+
+      async function skenario1() {
+        const payload = {
+          idPelanggan: "CUST-001",
+          metodePembayaran: "CREDIT_CARD",
+          tokenkartu: "tok_visa_valid_999",
+          keranjangData: [
+            { idMenu: "MENU-01", jumlah: 2 },
+            { idMenu: "MENU-02", jumlah: 1 },
+          ],
+        };
+
+        const result = await kirimRequest("/api/v1/checkout", payload);
+
+        // Simpan ID Pesanan jika sukses
+        if (
+          result &&
+          result.data &&
+          result.data.success &&
+          result.data.data.idPesanan
+        ) {
+          idPesananTerakhir = result.data.data.idPesanan;
+          console.log("ID Pesanan tersimpan: " + idPesananTerakhir);
+        }
+      }
+
+      async function skenario2() {
+        // Sengaja pesan 100 agar kena validasi stok habis
+        const payload = {
+          idPelanggan: "CUST-001",
+          metodePembayaran: "CREDIT_CARD",
+          tokenkartu: "tok_visa_valid_999",
+          keranjangData: [{ idMenu: "MENU-02", jumlah: 100 }],
+        };
+        await kirimRequest("/api/v1/checkout", payload);
+      }
+
+      async function skenario3() {
+        // Sengaja pakai tokenkartu yang salah agar ditolak Payment Gateway
+        const payload = {
+          idPelanggan: "CUST-001",
+          metodePembayaran: "CREDIT_CARD",
+          tokenkartu: "invalid_card",
+          keranjangData: [{ idMenu: "MENU-01", jumlah: 1 }],
+        };
+        await kirimRequest("/api/v1/checkout", payload);
+      }
+
+      async function skenario4() {
+        if (!idPesananTerakhir) {
+          alert(
+            "Kamu harus menjalankan Skenario 1 (Checkout Sukses) terlebih dahulu agar ada pesanan yang bisa dibatalkan!",
+          );
+          return;
+        }
+
+        const payload = {
+          alasan: "Pelanggan berubah pikiran dan ingin ganti menu",
+        };
+
+        await kirimRequest(
+          `/api/v1/checkout/${idPesananTerakhir}/batal`,
+          payload,
+        );
+      }
+    </script>
+  </body>
+</html>
